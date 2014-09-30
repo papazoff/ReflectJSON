@@ -2,5 +2,6 @@
 .flexLibProperties
 .fxpProperties
 .project
+.settings
 *.iml
 .idea

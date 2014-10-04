@@ -39,12 +39,9 @@ internal class ActionScriptTypes {
     public static const INT:String = "int";
     public static const UINT:String = "uint";
     public static const NULL:String = "null";
-    public static const NAN:String = "NaN";
 
     public static const OBJECT:String = "Object";
     public static const ARRAY:String = "Array";
     public static const VECTOR:String = "__AS3__.vec::Vector";
-
-    public static const ARRAY_COLLECTION:String = "mx.collections::ArrayCollection";
 }
 }

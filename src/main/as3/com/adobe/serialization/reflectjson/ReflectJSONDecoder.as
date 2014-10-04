@@ -39,7 +39,7 @@ import com.adobe.serialization.json.JSONTokenizer;
 import flash.utils.describeType;
 import flash.utils.getDefinitionByName;
 
-internal class ReflectJSONDecoder {
+public class ReflectJSONDecoder {
 
     /** The value that will get parsed from the JSON string */
     private var value:*;
@@ -51,12 +51,11 @@ internal class ReflectJSONDecoder {
     private var token:JSONToken;
 
     /**
-     * Constructs a new ActionJSONDecoder to parse a JSON string
-     * into a native value object.
+     * Constructs a new ReflectJSONDecoder to parse provided JSON string into a domain object.
      *
-     * @param s The JSON string to be converted into a native value object
-     * @param output The Class to be created as a parsing result
-     * @param elementsType - class that represents elements type in case if we need an Array in the result.
+     * @param s JSON string to be converted into a domain object
+     * @param output expected domain object
+     * @param elementsType - class that represents elements type in case if we need a collection as a result.
      * @langversion ActionScript 3.0
      * @playerversion Flash 9.0
      * @tiptext
@@ -74,7 +73,7 @@ internal class ReflectJSONDecoder {
     }
 
     /**
-     * Returns the next token from the tokenzier reading
+     * Returns the next token from the tokenizer reading
      * the JSON string
      */
     private function nextToken():JSONToken {
@@ -106,18 +105,7 @@ internal class ReflectJSONDecoder {
      * Attempt to parse an object.
      */
     private function parseObject(expectedObject:Class, description:XML):* {
-        // create the object internally that we're going to
-        // attempt to parse from the tokenizer
         var o:Object = new expectedObject();
-
-//        try {
-////            var expectedClass:Class = Class(getDefinitionByName(expectedType));
-//            o = new expectedObject();
-//        }
-//        catch (e:ReferenceError) {
-//            tokenizer.parseError("Unregistered class name " + expectedObject + ". " +
-//                    "Use registerClassAlias(' + expectedType + ', Class) method to register your class aliases " + e.getStackTrace());
-//        }
 
         var expectedFieldsList:XMLList = description..*.(name() == "variable" || (name() == "accessor" &&
                 (String(attribute("access")).search("write") > -1)));
@@ -126,16 +114,11 @@ internal class ReflectJSONDecoder {
             tokenizer.parseError(" Expected output object should contain fields ");
         }
 
-        // store the string part of an object member so
-        // that we can assign it a value in the object
         var key:String;
 
-        // grab the next token from the tokenizer
         nextValidToken();
 
-        // check to see if we have an empty object
         if (token.type == JSONTokenType.RIGHT_BRACE) {
-            // throw an exception if we unexpect empty object
             if (expectedFieldsList.length() > 0) {
                 tokenizer.parseError(" Unexpected empty object ");
             }
@@ -144,7 +127,6 @@ internal class ReflectJSONDecoder {
         }
 
         var expectedFields:Array = extractFieldsFromDescription(expectedFieldsList);
-
         var currentField:Object;
 
         // deal with members of the object, and use an "infinite"
@@ -153,42 +135,37 @@ internal class ReflectJSONDecoder {
             if (token.type == JSONTokenType.STRING) {
                 // the string value we read is the key for the object
 
-                if (!isFieldPresentInExpectedObject(token.value.toString(), expectedFields)) {
+                var tokenValue:String = token.value.toString();
+
+                if (!isFieldPresentInExpectedObject(tokenValue, expectedFields)) {
                     tokenizer.parseError(" JSON object contain unexpected field : " + key);
                 }
 
-                currentField = getFieldByKey(token.value.toString(), expectedFields);
-
+                currentField = getFieldByKey(tokenValue, expectedFields);
                 key = String(currentField.name);
 
-                // move past the string to see what's next
                 nextValidToken();
 
-                // after the string there should be a :
                 if (token.type == JSONTokenType.COLON) {
 
-                    // move past the : and read/assign a value for the key
                     nextToken();
 
                     var fieldType:String = currentField.type;
                     var valueClass:Class = Class(getDefinitionByName(fieldType));
 
-                    //if current field is Array type we should pass elements type argument to parseValue method.
-                    if (fieldType == "Array") {
-                        o[key] = parseValue(valueClass, Class(getDefinitionByName(currentField.elementsType))) as Array;
+                    //if current field is any collection type, we should pass elements type argument to parseValue method.
+                    if (fieldType == ActionScriptTypes.ARRAY || fieldType.search(ActionScriptTypes.VECTOR) > -1) {
+                        o[key] = parseValue(valueClass, Class(getDefinitionByName(currentField.elementsType)));
                     }
                     else {
                         o[key] = parseValue(valueClass);
                     }
 
-                    // move past the value to see what's next
                     nextValidToken();
 
-                    // after the value there's either a } or a ,
                     if (token.type == JSONTokenType.RIGHT_BRACE) {
-                        // // we're done reading the object, so return it
+                        // we're done reading the object, so return it
                         return o;
-
                     }
                     else if (token.type == JSONTokenType.COMMA) {
                         // skip past the comma and read another member
@@ -201,7 +178,6 @@ internal class ReflectJSONDecoder {
                 else {
                     tokenizer.parseError("Expecting : but found " + token.value);
                 }
-
             }
             else {
                 tokenizer.parseError("Expecting string but found " + token.value);
@@ -214,24 +190,18 @@ internal class ReflectJSONDecoder {
      * Attempt to parse an array.
      */
     private function parseArray(elementsType:Class = null):Array {
-        // create an array internally that we're going to attempt
-        // to parse from the tokenizer
         var a:Array = [];
 
         // grab the next valid token from the tokenizer to move
         // past the opening [
         nextValidToken();
 
-        // check to see if we have an empty array
         if (token.type == JSONTokenType.RIGHT_BRACKET) {
             // we're done reading the array, so return it
             return a;
         }
 
-        // deal with elements of the array, and use an "infinite"
-        // loop because we could have any amount of elements
         while (true) {
-            // read in the value and add it to the array
             try {
                 a.push(parseValue(elementsType));
             }
@@ -240,7 +210,6 @@ internal class ReflectJSONDecoder {
                         "Use registerClassAlias('" + elementsType + "', Class) method to register your class aliases " + e.getStackTrace());
             }
 
-            // after the value there should be a ] or a ,
             nextValidToken();
 
             if (token.type == JSONTokenType.RIGHT_BRACKET) {
@@ -284,11 +253,13 @@ internal class ReflectJSONDecoder {
                 return parseObject(expectedObject, description);
             case JSONTokenType.LEFT_BRACKET:
                 if (!isExpectedType(ActionScriptTypes.ARRAY, expectedType,
-                        (expectedType == ActionScriptTypes.VECTOR ?
+                        (expectedType.search(ActionScriptTypes.VECTOR) > -1 ?
                                 expectedTypeBases.concat([ActionScriptTypes.ARRAY]) : expectedTypeBases))) {
                     tokenizer.parseError(" Unexpected type parsed from JSON ");
                 }
-                return parseArray(elementsType);
+
+                var result:Array = parseArray(elementsType);
+                return expectedType.search(ActionScriptTypes.VECTOR) > -1 ? Vector.<Object>(result) : result;
             case JSONTokenType.STRING:
                 if (!isExpectedType(ActionScriptTypes.STRING, expectedType, expectedTypeBases)) {
                     tokenizer.parseError(" Unexpected type parsed from JSON ");
@@ -297,7 +268,7 @@ internal class ReflectJSONDecoder {
             case JSONTokenType.NUMBER:
                 if (!isExpectedType(ActionScriptTypes.NUMBER, expectedType,
                         (expectedType == ActionScriptTypes.INT || expectedType == ActionScriptTypes.UINT) ?
-                                expectedTypeBases.concat(ActionScriptTypes.NUMBER) : expectedTypeBases)) {
+                                expectedTypeBases.concat([ActionScriptTypes.NUMBER]) : expectedTypeBases)) {
                     tokenizer.parseError(" Unexpected type parsed from JSON ");
                 }
                 return token.value;

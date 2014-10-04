@@ -33,24 +33,26 @@
 package com.adobe.serialization.reflectjson {
 
 /**
- * This class provides encoding and decoding of the JSON format.
+ * This class provides encoding to JSON and decoding to domain objects functionality.
  *
  * Example usage:
  * <code>
- *        // create a JSON string from an internal object
- *        ReflectJSON.toJSONString( myObject );
+ *        // Encode domain object to a JSON string
+ *        ReflectJSON.toJSONString( domainObject );
  *
- *        // read a JSON string into an internal object
- *        var myObject:DomainClass = ReflectJSON.fromJSONString( jsonString, DomainClass );
- *    </code>
+ *        // Decode JSON string into domain object
+ *        var myObject:DomainClass = ReflectJSON.fromJSONString( jsonString, domainClass );
+ *        // OR
+ *        var myObject:DomainClass = ReflectJSON.fromJSONString( jsonString, collectionType, domainClass );
+ * </code>
  */
 
 public class ReflectJSON {
 
     /**
-     * Encodes a object into a JSON string.
+     * Encodes a domain object into a JSON string.
      *
-     * @param o is a domain object from which JSON string will be created
+     * @param o is a domain object which will be serialized to JSON string
      * @return JSON string representing o
      * @langversion ActionScript 3.0
      * @playerversion Flash 9.0 and above
@@ -60,19 +62,18 @@ public class ReflectJSON {
     }
 
     /**
-     * Decodes a JSON string into a domain typed object.
+     * Decodes a JSON string into a domain object.
      *
-     * @param s The JSON string representing the object
-     * @param c Domain class to be created
-     * @param eType elements type in case we need to get array
-     * @return Domain object specified by type of c attribute
+     * @param json - JSON string
+     * @param type - expected domain class to be created
+     * @param elementsType - elements type in case we need to get collection of elements as a result
+     * @return domain object or collection of domain objects specified by <code>type</code> and <code>elementsType</code> attributes
      * @throws com.adobe.serialization.json.JSONParseError
      * @langversion ActionScript 3.0
      * @playerversion Flash 9.0 and above
      */
-    public static function fromJSONString(s:String, c:Class, eType:Class = null):* {
-        return new ReflectJSONDecoder(s, c, eType).getValue();
-
+    public static function fromJSONString(json:String, type:Class, elementsType:Class = null):* {
+        return new ReflectJSONDecoder(json, type, elementsType).getValue();
     }
 
 }

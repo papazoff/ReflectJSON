@@ -35,7 +35,7 @@ package com.adobe.serialization.reflectjson {
 internal class MetadataNames {
 
     /**
-     *    Names of predefined metadata tags for object fields
+     *    Acceptable metadata tags by library for object fields
      */
     public static const SERIALIZED_NAME:String = "SerializedName";
     public static const ELEMENTS_TYPE:String = "ElementsType";

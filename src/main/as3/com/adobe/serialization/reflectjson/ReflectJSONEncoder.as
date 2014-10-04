@@ -33,16 +33,15 @@
 package com.adobe.serialization.reflectjson {
 
 import flash.utils.describeType;
+import flash.utils.getQualifiedClassName;
 
-import mx.collections.ArrayCollection;
-
-internal class ReflectJSONEncoder {
+public class ReflectJSONEncoder {
 
     /** The string that is going to represent the object we're encoding */
     private var jsonString:String;
 
     /**
-     * Creates a new JSONEncoder.
+     * Creates a new ReflectJSONEncoder.
      *
      * @param value The object to encode as a JSON string
      * @langversion ActionScript 3.0
@@ -73,43 +72,19 @@ internal class ReflectJSONEncoder {
      *        type (object, number, array, etc)
      */
     private function convertToString(value:*):String {
-
-        // determine what value is and convert it based on it's type
         if (value is String) {
-
-            // escape the string so it's formatted correctly
             return escapeString(value as String);
-
         }
         else if (value is Number) {
-
-            // only encode numbers that finite
             return isFinite(value as Number) ? value.toString() : "null";
-
         }
         else if (value is Boolean) {
-
-            // convert boolean to string easily
             return value ? "true" : "false";
-
         }
-        else if (value is Array || value is ArrayCollection) {
-            var collectionValue:Array;
-
-            if (value is Array) {
-                collectionValue = value;
-            }
-            else if (value is ArrayCollection) {
-                collectionValue = (value as ArrayCollection).toArray();
-            }
-
-            // call the helper method to convert an array
-            return arrayToString(collectionValue);
-
+        else if (value is Array || getQualifiedClassName(value).search(ActionScriptTypes.VECTOR) > -1) {
+            return iterableToString(value);
         }
         else if (value is Object && value != null) {
-
-            // call the helper method to convert an object
             return objectToString(value);
         }
         return "null";
@@ -122,15 +97,11 @@ internal class ReflectJSONEncoder {
      * @return The string with escaped special characters
      *        according to the JSON specification
      */
-    private function escapeString(str:String):String {
-        // create a string to store the string's jsonstring value
+    private static function escapeString(str:String):String {
         var s:String = "";
-        // current character in the string we're processing
         var ch:String;
-        // store the length in a local variable to reduce lookups
         var len:Number = str.length;
 
-        // loop over all of the characters in the string
         for (var i:int = 0; i < len; i++) {
 
             // examine the character to determine if we have to escape it
@@ -140,10 +111,6 @@ internal class ReflectJSONEncoder {
                 case '"':	// quotation mark
                     s += "\\\"";
                     break;
-
-                //case '/':	// solidus
-                //	s += "\\/";
-                //	break;
 
                 case '\\':	// reverse solidus
                     s += "\\\\";
@@ -197,46 +164,21 @@ internal class ReflectJSONEncoder {
     }
 
     /**
-     * Converts an array to it's JSON string equivalent
+     * Converts iterables to it's JSON string equivalent
      *
-     * @param a The array to convert
-     * @return The JSON string representation of <code>a</code>
+     * @param value The iterable object to convert
+     * @return The JSON string representation of <code>value</code>
      */
-    private function arrayToString(a:Array):String {
-        // create a string to store the array's jsonstring value
+    private function iterableToString(value:*):String {
         var s:String = "";
 
-        // loop over the elements in the array and add their converted
-        // values to the string
-        for (var i:int = 0; i < a.length; i++) {
-            // when the length is 0 we're adding the first element so
-            // no comma is necessary
+        for (var i:int = 0; i < value.length; i++) {
             if (s.length > 0) {
-                // we've already added an element, so add the comma separator
                 s += ","
             }
-
-            // convert the value to a string
-            s += convertToString(a[i]);
+            s += convertToString(value[i]);
         }
 
-        // KNOWN ISSUE:  In ActionScript, Arrays can also be associative
-        // objects and you can put anything in them, ie:
-        //		myArray["foo"] = "bar";
-        //
-        // These properties aren't picked up in the for loop above because
-        // the properties don't correspond to indexes.  However, we're
-        // sort of out luck because the JSON specification doesn't allow
-        // these types of array properties.
-        //
-        // So, if the array was also used as an associative object, there
-        // may be some values in the array that don't get properly encoded.
-        //
-        // A possible solution is to instead encode the Array as an Object
-        // but then it won't get decoded correctly (and won't be an
-        // Array instance)
-
-        // close the array and return it's string value
         return "[" + s + "]";
     }
 
@@ -247,50 +189,32 @@ internal class ReflectJSONEncoder {
      * @return The JSON string representation of <code>o</code>
      */
     private function objectToString(o:Object):String {
-        // create a string to store the object's json string value
         var s:String = "";
-
-        // determine if o is a class instance or a plain object
         var classInfo:XML = describeType(o);
 
         if (classInfo.@name.toString() == ActionScriptTypes.OBJECT) {
-            // the value of o[key] in the loop below - store this
-            // as a variable so we don't have to keep looking up o[key]
-            // when testing for valid values to convert
             var value:Object;
 
-            // loop over the keys in the object and add their converted
-            // values to the string
             for (var key:String in o) {
-                // assign value to a variable for quick lookup
-                value = o[key];
+                if (o.hasOwnProperty(key)) {
+                    value = o[key];
 
-                // don't add function's to the JSON string
-                if (value is Function) {
-                    // skip this key and try another
-                    continue;
+                    if (value is Function) {
+                        continue;
+                    }
+
+                    if (s.length > 0) {
+                        s += ","
+                    }
+
+                    s += escapeString(key) + ":" + convertToString(value);
                 }
-
-                // when the length is 0 we're adding the first item so
-                // no comma is necessary
-                if (s.length > 0) {
-                    // we've already added an item, so add the comma separator
-                    s += ","
-                }
-
-                s += escapeString(key) + ":" + convertToString(value);
             }
         }
         else {
-            // o is a class instance
-            // Loop over all of the variables and accessors in the class and
-            // serialize them along with their values.
-
             for each (var v:XML in classInfo..*.( name() == "variable" || ( name() == "accessor"
-                // Issue #116 - Make sure accessors are readable
                     && attribute("access").charAt(0) == "r" ) )) {
 
-                // Issue #110 - If [Transient] metadata exists, then we should skip
                 if (v.metadata && v.metadata.( @name == "Transient" ).length() > 0) {
                     continue;
                 }
@@ -301,17 +225,12 @@ internal class ReflectJSONEncoder {
                     fieldName = v.metadata.( @name == MetadataNames.SERIALIZED_NAME ).arg.@value;
                 }
 
-                // When the length is 0 we're adding the first item so
-                // no comma is necessary
                 if (s.length > 0) {
-                    // We've already added an item, so add the comma separator
                     s += ","
                 }
 
-                s += escapeString(fieldName.toString()) + ":"
-                        + convertToString(o[ v.@name ]);
+                s += escapeString(fieldName.toString()) + ":" + convertToString(o[ v.@name ]);
             }
-
         }
 
         return "{" + s + "}";

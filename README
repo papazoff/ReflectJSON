@@ -1,1 +1,1 @@
-An extention to the com.adobe.serialization.json library to allow decode JSON string to project relative objects using Metadata tags in casses of collections and field names mapping.
+An extention to the JSON serialization from as3corelib library to allow decode JSON string into domain objects using Metadata tags in your domain objects.

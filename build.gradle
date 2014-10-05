@@ -1,0 +1,28 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.gradlefx:gradlefx:0.8.2'
+    }
+}
+
+apply plugin: 'gradlefx'
+
+type = 'swc'
+
+additionalCompilerOptions = [
+        '-keep-as3-metadata+=SerializedName',
+        '-keep-as3-metadata+=ElementsType'
+]
+
+srcDirs = ['src/main/as']
+testDirs = ['src/test/as']
+
+frameworkLinkage='none'
+
+dependencies {
+    internal files(
+            'lib/as3corelib.swc'
+    )
+}

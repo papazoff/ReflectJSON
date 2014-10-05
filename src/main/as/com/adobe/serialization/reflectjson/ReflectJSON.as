@@ -44,6 +44,12 @@ package com.adobe.serialization.reflectjson {
  *        var myObject:DomainClass = ReflectJSON.fromJSONString( jsonString, domainClass );
  *        // OR
  *        var myObject:DomainClass = ReflectJSON.fromJSONString( jsonString, collectionType, domainClass );
+ *
+ *        //If you know that JSON string contains unexpected fields which are not required in your domain object, you can do as follows
+ *        var myObject:DomainClass = ReflectJSON.fromJSONStringSkipUnexpected( jsonString, domainClass );
+ *        //OR
+ *        var myObject:DomainClass = ReflectJSON.fromJSONStringSkipUnexpected( jsonString, collectionType, domainClass );
+ *
  * </code>
  */
 
@@ -74,6 +80,21 @@ public class ReflectJSON {
      */
     public static function fromJSONString(json:String, type:Class, elementsType:Class = null):* {
         return new ReflectJSONDecoder(json, type, elementsType).getValue();
+    }
+
+    /**
+     * Decodes a JSON string into a domain object and skips unexpected fields if found.
+     *
+     * @param json - JSON string
+     * @param type - expected domain class to be created
+     * @param elementsType - elements type in case we need to get collection of elements as a result
+     * @return domain object or collection of domain objects specified by <code>type</code> and <code>elementsType</code> attributes
+     * @throws com.adobe.serialization.json.JSONParseError
+     * @langversion ActionScript 3.0
+     * @playerversion Flash 9.0 and above
+     */
+    public static function fromJSONStringSkipUnexpected(json:String, type:Class, elementsType:Class = null):* {
+        return new ReflectJSONDecoder(json, type, elementsType, true).getValue();
     }
 
 }

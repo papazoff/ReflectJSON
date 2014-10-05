@@ -42,13 +42,19 @@ import flash.utils.getDefinitionByName;
 public class ReflectJSONDecoder {
 
     /** The value that will get parsed from the JSON string */
-    private var value:*;
+    private var _value:*;
 
     /** The tokenizer designated to read the JSON string */
-    private var tokenizer:JSONTokenizer;
+    private var _tokenizer:JSONTokenizer;
 
     /** The current token from the tokenizer */
-    private var token:JSONToken;
+    private var _token:JSONToken;
+
+    /**
+     * Designates whether to skip or throw an exception when
+     * unexpected field has been found during parsing json string
+     */
+    private var _skipUnexpectedFields:Boolean = false;
 
     /**
      * Constructs a new ReflectJSONDecoder to parse provided JSON string into a domain object.
@@ -56,20 +62,23 @@ public class ReflectJSONDecoder {
      * @param s JSON string to be converted into a domain object
      * @param output expected domain object
      * @param elementsType - class that represents elements type in case if we need a collection as a result.
+     * @param skipUnexpectedFields - skipUnexpectedFields - flag that designates whether to skip or not all
+     * unexpected fields which have been found during json string parsing
      * @langversion ActionScript 3.0
      * @playerversion Flash 9.0
      * @tiptext
      */
-    public function ReflectJSONDecoder(s:String, output:Class, elementsType:Class = null) {
+    public function ReflectJSONDecoder(s:String, output:Class, elementsType:Class = null, skipUnexpectedFields:Boolean = false) {
         super();
 
-        tokenizer = new JSONTokenizer(s, true);
+        _skipUnexpectedFields = skipUnexpectedFields;
+        _tokenizer = new JSONTokenizer(s, true);
         nextToken();
-        value = parseValue(output, elementsType);
+        _value = parseValue(output, elementsType);
     }
 
     public function getValue():* {
-        return value;
+        return _value;
     }
 
     /**
@@ -77,7 +86,7 @@ public class ReflectJSONDecoder {
      * the JSON string
      */
     private function nextToken():JSONToken {
-        return token = tokenizer.getNextToken();
+        return _token = _tokenizer.getNextToken();
     }
 
     /**
@@ -85,10 +94,10 @@ public class ReflectJSONDecoder {
      * the JSON string and verifies that the token is valid.
      */
     private final function nextValidToken():JSONToken {
-        token = tokenizer.getNextToken();
+        _token = _tokenizer.getNextToken();
         checkValidToken();
 
-        return token;
+        return _token;
     }
 
     /**
@@ -96,8 +105,8 @@ public class ReflectJSONDecoder {
      */
     private final function checkValidToken():void {
         // Catch errors when the input stream ends abruptly
-        if (token == null) {
-            tokenizer.parseError("Unexpected end of input");
+        if (_token == null) {
+            _tokenizer.parseError("Unexpected end of input");
         }
     }
 
@@ -111,16 +120,16 @@ public class ReflectJSONDecoder {
                 (String(attribute("access")).search("write") > -1)));
 
         if (expectedFieldsList.length() <= 0) {
-            tokenizer.parseError(" Expected output object should contain fields ");
+            _tokenizer.parseError(" Expected output object should contain fields ");
         }
 
         var key:String;
 
         nextValidToken();
 
-        if (token.type == JSONTokenType.RIGHT_BRACE) {
+        if (_token.type == JSONTokenType.RIGHT_BRACE) {
             if (expectedFieldsList.length() > 0) {
-                tokenizer.parseError(" Unexpected empty object ");
+                _tokenizer.parseError(" Unexpected empty object ");
             }
             // we're done reading the object, so return it
             return o;
@@ -132,13 +141,33 @@ public class ReflectJSONDecoder {
         // deal with members of the object, and use an "infinite"
         // loop because we could have any amount of members
         while (true) {
-            if (token.type == JSONTokenType.STRING) {
+            if (_token.type == JSONTokenType.STRING) {
                 // the string value we read is the key for the object
 
-                var tokenValue:String = token.value.toString();
+                var tokenValue:String = _token.value.toString();
 
                 if (!isFieldPresentInExpectedObject(tokenValue, expectedFields)) {
-                    tokenizer.parseError(" JSON object contain unexpected field : " + key);
+                    if (!_skipUnexpectedFields) {
+                        _tokenizer.parseError(" JSON object contain unexpected field : " + tokenValue);
+                    }
+
+                    nextValidToken();
+                    nextToken();
+                    nextValidToken();
+
+                    if (_token.type == JSONTokenType.RIGHT_BRACE) {
+                        // we're done reading the object, so return it
+                        return o;
+                    }
+                    else if (_token.type == JSONTokenType.COMMA) {
+                        // skip past the comma and read another member
+                        nextToken();
+                    }
+                    else {
+                        _tokenizer.parseError("Expecting } or , but found " + _token.value);
+                    }
+
+                    continue;
                 }
 
                 currentField = getFieldByKey(tokenValue, expectedFields);
@@ -146,7 +175,7 @@ public class ReflectJSONDecoder {
 
                 nextValidToken();
 
-                if (token.type == JSONTokenType.COLON) {
+                if (_token.type == JSONTokenType.COLON) {
 
                     nextToken();
 
@@ -163,24 +192,24 @@ public class ReflectJSONDecoder {
 
                     nextValidToken();
 
-                    if (token.type == JSONTokenType.RIGHT_BRACE) {
+                    if (_token.type == JSONTokenType.RIGHT_BRACE) {
                         // we're done reading the object, so return it
                         return o;
                     }
-                    else if (token.type == JSONTokenType.COMMA) {
+                    else if (_token.type == JSONTokenType.COMMA) {
                         // skip past the comma and read another member
                         nextToken();
                     }
                     else {
-                        tokenizer.parseError("Expecting } or , but found " + token.value);
+                        _tokenizer.parseError("Expecting } or , but found " + _token.value);
                     }
                 }
                 else {
-                    tokenizer.parseError("Expecting : but found " + token.value);
+                    _tokenizer.parseError("Expecting : but found " + _token.value);
                 }
             }
             else {
-                tokenizer.parseError("Expecting string but found " + token.value);
+                _tokenizer.parseError("Expecting string but found " + _token.value);
             }
         }
         return null;
@@ -196,7 +225,7 @@ public class ReflectJSONDecoder {
         // past the opening [
         nextValidToken();
 
-        if (token.type == JSONTokenType.RIGHT_BRACKET) {
+        if (_token.type == JSONTokenType.RIGHT_BRACKET) {
             // we're done reading the array, so return it
             return a;
         }
@@ -206,22 +235,22 @@ public class ReflectJSONDecoder {
                 a.push(parseValue(elementsType));
             }
             catch (e:ReferenceError) {
-                tokenizer.parseError(" Unregistered class alias " + elementsType + ". " +
+                _tokenizer.parseError(" Unregistered class alias " + elementsType + ". " +
                         "Use registerClassAlias('" + elementsType + "', Class) method to register your class aliases " + e.getStackTrace());
             }
 
             nextValidToken();
 
-            if (token.type == JSONTokenType.RIGHT_BRACKET) {
+            if (_token.type == JSONTokenType.RIGHT_BRACKET) {
                 // we're done reading the array, so return it
                 return a;
             }
-            else if (token.type == JSONTokenType.COMMA) {
+            else if (_token.type == JSONTokenType.COMMA) {
                 // move past the comma and read another value
                 nextToken();
             }
             else {
-                tokenizer.parseError("Expecting ] or , but found " + token.value);
+                _tokenizer.parseError("Expecting ] or , but found " + _token.value);
             }
         }
         return null;
@@ -245,47 +274,47 @@ public class ReflectJSONDecoder {
             expectedTypeBases.push(description.extendsClass[i].@type);
         }
 
-        switch (token.type) {
+        switch (_token.type) {
             case JSONTokenType.LEFT_BRACE:
                 if (!isExpectedType(ActionScriptTypes.OBJECT, expectedType, expectedTypeBases)) {
-                    tokenizer.parseError(" Unexpected type parsed from JSON ");
+                    _tokenizer.parseError(" Unexpected type parsed from JSON ");
                 }
                 return parseObject(expectedObject, description);
             case JSONTokenType.LEFT_BRACKET:
                 if (!isExpectedType(ActionScriptTypes.ARRAY, expectedType,
                         (expectedType.search(ActionScriptTypes.VECTOR) > -1 ?
                                 expectedTypeBases.concat([ActionScriptTypes.ARRAY]) : expectedTypeBases))) {
-                    tokenizer.parseError(" Unexpected type parsed from JSON ");
+                    _tokenizer.parseError(" Unexpected type parsed from JSON ");
                 }
 
                 var result:Array = parseArray(elementsType);
                 return expectedType.search(ActionScriptTypes.VECTOR) > -1 ? Vector.<Object>(result) : result;
             case JSONTokenType.STRING:
                 if (!isExpectedType(ActionScriptTypes.STRING, expectedType, expectedTypeBases)) {
-                    tokenizer.parseError(" Unexpected type parsed from JSON ");
+                    _tokenizer.parseError(" Unexpected type parsed from JSON ");
                 }
-                return token.value;
+                return _token.value;
             case JSONTokenType.NUMBER:
                 if (!isExpectedType(ActionScriptTypes.NUMBER, expectedType,
                         (expectedType == ActionScriptTypes.INT || expectedType == ActionScriptTypes.UINT) ?
                                 expectedTypeBases.concat([ActionScriptTypes.NUMBER]) : expectedTypeBases)) {
-                    tokenizer.parseError(" Unexpected type parsed from JSON ");
+                    _tokenizer.parseError(" Unexpected type parsed from JSON ");
                 }
-                return token.value;
+                return _token.value;
             case JSONTokenType.TRUE:
             case JSONTokenType.FALSE:
                 if (!isExpectedType(ActionScriptTypes.BOOLEAN, expectedType, expectedTypeBases)) {
-                    tokenizer.parseError(" Unexpected type parsed from JSON ");
+                    _tokenizer.parseError(" Unexpected type parsed from JSON ");
                 }
-                return token.value;
+                return _token.value;
             case JSONTokenType.NULL:
                 if (!isExpectedType(ActionScriptTypes.NULL, expectedType, expectedTypeBases)) {
-                    tokenizer.parseError(" Unexpected type parsed from JSON ");
+                    _tokenizer.parseError(" Unexpected type parsed from JSON ");
                 }
-                return token.value;
+                return _token.value;
             case JSONTokenType.NAN:
             default:
-                tokenizer.parseError("Unexpected " + token.value);
+                _tokenizer.parseError("Unexpected " + _token.value);
         }
         return null;
     }

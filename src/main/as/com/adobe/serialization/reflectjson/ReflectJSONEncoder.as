@@ -38,7 +38,7 @@ import flash.utils.getQualifiedClassName;
 public class ReflectJSONEncoder {
 
     /** The string that is going to represent the object we're encoding */
-    private var jsonString:String;
+    private var _jsonString:String;
 
     /**
      * Creates a new ReflectJSONEncoder.
@@ -49,7 +49,7 @@ public class ReflectJSONEncoder {
      * @tiptext
      */
     public function ReflectJSONEncoder(value:*) {
-        jsonString = convertToString(value);
+        _jsonString = convertToString(value);
     }
 
     /**
@@ -62,7 +62,7 @@ public class ReflectJSONEncoder {
      * @tiptext
      */
     public function getString():String {
-        return jsonString;
+        return _jsonString;
     }
 
     /**

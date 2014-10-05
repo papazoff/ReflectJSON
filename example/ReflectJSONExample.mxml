@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:s="library://ns.adobe.com/flex/spark">
+    <fx:Script>
+        <![CDATA[
+        import com.adobe.serialization.reflectjson.ReflectJSON;
+        import com.papazoff.reflectjson.example.domain.User;
+
+        private static const JSON_OBJECT:String = '' +
+                '{"id":"00000000-0000-0000-0000-000000000000",' +
+                '"name":"Steve",' +
+                '"secondName":"Jobs",' +
+                '"address":"1 Infinite Loop, Cupertino, CA 95014",' +
+                '"children":' +
+                '[' +
+                '{"id":"00000000-0000-0000-0000-000000000001","name":"Lisa","surname":"Brennan Jobs","address":"1 Infinite Loop, Cupertino, CA 95014"},' +
+                '{"id":"00000000-0000-0000-0000-000000000002","name":"Reed","surname":"Jobs","address":"1 Infinite Loop, Cupertino, CA 95014"},' +
+                '{"id":"00000000-0000-0000-0000-000000000003","name":"Erin","surname":"Jobs","address":"1 Infinite Loop, Cupertino, CA 95014"},' +
+                '{"id":"00000000-0000-0000-0000-000000000004","name":"Eve","surname":"Jobs","address":"1 Infinite Loop, Cupertino, CA 95014"}' +
+                ']' +
+                '}';
+
+        private static const JSON_ARRAY:String = '' +
+                '[' +
+                '{"id":"00000000-0000-0000-0000-000000000001","name":"Steve","surname":"Jobs","address":"1 Infinite Loop, Cupertino, CA 95014"},' +
+                '{"id":"00000000-0000-0000-0000-000000000002","name":"Steve","surname":"Wozniak","address":"1 Infinite Loop, Cupertino, CA 95014"},' +
+                '{"id":"00000000-0000-0000-0000-000000000003","name":"Ronald","surname":"Wayne","address":"1 Infinite Loop, Cupertino, CA 95014"}' +
+                ']';
+
+        private function serialize():void {
+            var arr:Array = [];
+
+            for (var i:int = 0; i < 10; i++) {
+                var user:User = new User();
+                user.id = "00000000-0000-0000-0000-00000000000" + i;
+                user.firstName = "Steve";
+                user.secondName = "Jobs";
+                user.address = "1 Infinite Loop, Cupertino, CA 95014";
+
+                arr.push(user);
+            }
+
+            resultTextArea.text += ReflectJSON.toJSONString(arr);
+            resultTextArea.text += "\n\n";
+        }
+
+        private function deserialize():void {
+            var user:User = ReflectJSON.fromJSONString(JSON_OBJECT, User);
+
+            resultTextArea.text += ReflectJSON.toJSONString(user);
+            resultTextArea.text += "\n\n";
+
+            var collection:Vector.<User> = Vector.<User>(ReflectJSON.fromJSONString(JSON_ARRAY, Vector, User));
+
+            resultTextArea.text += ReflectJSON.toJSONString(collection);
+            resultTextArea.text += "\n\n";
+        }
+        ]]>
+    </fx:Script>
+
+    <s:layout>
+        <s:VerticalLayout/>
+    </s:layout>
+
+    <s:Button click="serialize();" label="Serialize"/>
+    <s:Button click="deserialize();" label="Deserialize"/>
+
+    <s:TextArea id="resultTextArea" width="400" height="400">
+
+    </s:TextArea>
+</s:Application>

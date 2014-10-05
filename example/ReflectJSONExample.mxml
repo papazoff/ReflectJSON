@@ -64,7 +64,7 @@
     <s:Button click="serialize();" label="Serialize"/>
     <s:Button click="deserialize();" label="Deserialize"/>
 
-    <s:TextArea id="resultTextArea" width="400" height="400">
+    <s:TextArea id="resultTextArea" width="400" height="700">
 
     </s:TextArea>
 </s:Application>

@@ -3,7 +3,7 @@
     <fx:Script>
         <![CDATA[
         import com.adobe.serialization.reflectjson.ReflectJSON;
-        import com.papazoff.reflectjson.example.domain.User;
+        import com.adobe.serialization.reflectjson.example.domain.User;
 
         private static const JSON_OBJECT:String = '' +
                 '{"id":"00000000-0000-0000-0000-000000000000",' +

@@ -1,4 +1,4 @@
-package com.papazoff.reflectjson.example.domain {
+package com.adobe.serialization.reflectjson.example.domain {
 
 public class User {
 

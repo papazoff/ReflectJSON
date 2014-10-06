@@ -2,7 +2,7 @@
 
 ReflectJSON is an extension to the JSON serialization from as3corelib library to allow decode JSON strings into domain objects and vice versa.
 
-## Download
+### Download
 
 [ReflectJSON.swc](https://github.com/papazoff/ReflectJSON/blob/master/bin/ReflectJSON.swc?raw=true)
 
